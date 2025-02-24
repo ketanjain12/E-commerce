@@ -137,6 +137,226 @@ export const signup = async (req, res) => {
 };
 
 /**
+ * @function getAllRoles
+ * @description Fetches all roles from the database, with optional filtering based on query parameters.
+ * @param {Object} req - The Express request object.
+ * @param {Object} req.query - Query parameters for filtering roles (e.g., name, machineName).
+ * @param {Object} res - The Express response object.
+ * @returns {JSON} - Returns a JSON response with a list of roles or an error message.
+ * @throws {Error} - Throws a 404 error if no roles are found, or a 500 error for unexpected issues.
+ */
+
+// get all roles (customer/admin) from the database
+ export const getAllRoles = async (req, res) => {
+      try {
+        // Optional query-based filtering (e.g., by name or machineName)
+        const { name, role } = req.query;
+    
+        const filter = {};
+
+        if (name) filter.name = new RegExp(name, 'i'); // Case-insensitive search
+        if (role) filter.role = new RegExp(role, 'i');
+    
+        // Fetch all roles or filtered roles
+        const roles = await User.find(filter).sort({ createdAt: -1 }); // Sorted by newest first
+    
+        // Check if roles are not found
+        if (!roles.length) {
+          return res.status(404).json({
+            status: false,
+             message: 'No roles found.'
+             });
+        }
+    // total count 
+    const totalCount = roles.length;
+    console.log("total count is ",totalCount);
+
+        // Count roles based on unique role types
+        const rolecounts =roles.reduce((acc,user)=>{
+          acc[user.role] = (acc[user.role] || 0)+1;
+          return acc;
+        },{}); 
+
+        return res.status(200).json({ 
+          status:true,
+          message: 'Roles retrieved successfully.',
+          totalCount:totalCount,
+          rolecounts:rolecounts,
+           roles
+         });
+
+      } catch (error) {
+        console.error('Error retrieving roles:', error);
+    
+        return res.status(500).json({ error: 'An unexpected error occurred. Please try again later.' });
+      }
+    };
+
+   // //Get the Roles By Id
+    export const getRoleById = async (req, res) => {
+
+      try {
+        const { id } = req.params;
+    
+        // Validate the ID format
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+          return res.status(400).json({
+            status:false,
+            error: 'Invalid ID format.'
+           });
+        }
+    
+        // Find the role by ID
+        // const role = await User.findById(id);
+        // Find role by ID and exclude deleted ones
+         const role = await User.findOne({ _id: id, isDeleted: { $ne: true } });
+
+        // Check if the role is not found
+        if (!role) {
+          return res.status(404).json({ 
+            error: 'Role not found or deleted'
+           });
+        }
+    console.log("role is ",role);
+
+        return res.status(200).json({
+          status:true,
+           message: 'Role retrieved successfully.',
+            role 
+          });
+      } catch (error) {
+        console.error('Error retrieving role:', error);
+    
+        // Specific error response for invalid ObjectId
+        if (error.kind === 'ObjectId') {
+          return res.status(400).json({ 
+            status:false,
+            error: 'Invalid ID format.'
+           });
+        }
+    
+        return res.status(500).json({
+          status:false,
+           error: 'An unexpected error occurred. Please try again later.' 
+          });
+      }
+    };
+    
+ //Soft Delete the role by Id
+    export const deleteRoleById = async (req, res) => {
+      try {
+        const { id } = req.params;
+    
+        // Validate ID format
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+          return res.status(400).json({
+            status:false,
+             error: 'Invalid ID format.' 
+            });
+        }
+    
+        // Find the role by ID
+        const role = await User.findById(id);
+        if (!role) {
+          return res.status(404).json({
+            status:false,
+             error: 'Role not found.' 
+            });
+        }
+       console.log("delete role is ",role);  
+
+        // Check if the role is already deleted
+        if (role.isDeleted) {
+          return res.status(400).json({ 
+            status:false,
+            error: 'Role is already deleted.' 
+          });
+        }
+    
+        // Soft delete the role 1 st way and 
+        role.isDeleted = true;
+        role.role = null; // Set role field to null
+        await role.save();
+
+          // Soft delete the role 2nd way
+    // await User.findByIdAndUpdate(id, { isDeleted: true });
+    
+        return res.status(200).json({ 
+          status:true,
+          message: 'Role deleted successfully'
+         });
+
+      } catch (error) {
+        console.error('Error deleting role:', error);
+
+        return res.status(500).json({
+          status:false,
+           error: 'An unexpected error occurred. Please try again later.' 
+          });
+      }
+    };
+    
+     // //Update the Role By Id save in notes folder
+     export const updateRole = async (req, res) => {
+
+      try {
+        const { id } = req.params;
+        const { role } = req.body;
+    
+        // Validate ID format
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+          return res.status(400).json({
+            status: false,
+            error: "Invalid ID format.",
+          });
+        }
+
+        // eisa issue aata h to
+        // "error": "Parameter \"filter\" to findOneAndUpdate() must be an object, got \"67b6f54b615ac019e20eaa68\" (type string)"
+        // solution : ({ _id: id }, { role }, { new: true })
+    
+        // Find the role by ID and check if it's deleted
+
+        const existingUser = await User.findOneAndUpdate({ _id: id }, { role }, { new: true });
+    
+        if (!existingUser) {
+          return res.status(404).json({
+            status: false,
+            error: "User not found or has been deleted.",
+          });
+        }
+    
+        // Validate and update role only
+        if (role && ["customer", "admin"].includes(role)) {
+          existingUser.role = role;
+        } else {
+          return res.status(400).json({
+            status: false,
+            error: "Invalid role value. Allowed values: 'customer' or 'admin'.",
+          });
+        }
+    
+        // Save the updated user role
+        existingUser.isDeleted = false;
+        await existingUser.save();
+    
+        return res.status(200).json({
+          status: true,
+          message: "User role updated successfully.",
+          user: existingUser,
+        });
+      } catch (error) {
+        console.error("Error updating user role:", error);
+    
+        return res.status(500).json({
+          status: false,
+          error: "An unexpected error occurred. Please try again later.",error:error.message,
+        });
+      }
+    };
+    
+    
+/**
  * @function logout
  * @description          Logs out a specific user by deleting their refresh token.
  * @param {Object} req - The Express request object.
@@ -510,15 +730,32 @@ export const getProfile = async (req, res) => {
 
   try {
       const { token } = req.body;
-      const decoded = jwt.verify(token, process.env.EMAIL_VERIFICATION_SECRET);
+
+      const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+
       const user = await User.findById(decoded.userId);
-      if (!user) return res.status(404).json({ msg: "User not found" });
+
+      if (!user) return res.status(404).json({
+        status:false,
+        msg: "User not found" 
+      });
 
       user.isVerified = true;
+
       await user.save();
-      res.json({ msg: "Email verified successfully" });
+
+      res.json({ 
+        status:false,
+        msg: user.email + " Email verified successfully",
+        userData:{
+          email:user.email
+        } 
+      });
   } catch (error) {
-      res.status(500).json({ msg: error.message });
+      res.status(500).json({
+        status:false,
+         msg:"error in  "+ error.message
+         });
   }
 };
 
@@ -532,16 +769,22 @@ export const sociallogin = async(req, res) => {
 
   try {
       const { provider, token } = req.body;
+
       let userData;
+
       if (provider === "google") {
           userData = await googleAuth(token);
       } else if (provider === "facebook") {
           userData = await facebookAuth(token);
       } else {
-          return res.status(400).json({ msg: "Invalid provider" });
+          return res.status(400).json({
+            status:false,
+             msg: "Invalid provider" 
+            });
       }
       
       let user = await User.findOne({ email: userData.email });
+
       if (!user) {
           user = new User({
               name: userData.name,
@@ -551,12 +794,23 @@ export const sociallogin = async(req, res) => {
           await user.save();
       }
 
-      const accessToken = jwt.sign({ userId: user._id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1h" });
-      res.json({ accessToken });
+      const accessToken = jwt.sign(
+        { userId: user._id },
+         process.env.ACCESS_TOKEN_SECRET,
+          { expiresIn: "1h" });
+
+      res.json({ 
+        accessToken: accessToken 
+      });
+
   } catch (error) {
-      res.status(500).json({ msg: error.message });
+      res.status(500).json({
+        status:false,
+        msg: error.message 
+      });
   }
 };
+
 
 /**
 * @route PATCH /auth/change-password
@@ -572,13 +826,24 @@ export const sociallogin = async(req, res) => {
       if (!user) return res.status(404).json({ msg: "User not found" });
 
       const isMatch = await bcrypt.compare(oldPassword, user.password);
-      if (!isMatch) return res.status(400).json({ msg: "Incorrect old password" });
+
+      if (!isMatch) return res.status(400).json({ 
+        status:false, 
+        msg: "Incorrect old password" 
+      });
 
       user.password = await bcrypt.hash(newPassword, 10);
+
       await user.save();
-      res.json({ msg: "Password changed successfully" });
+      res.json({ 
+        status:true,
+        msg: "Password changed successfully" 
+      });
   } catch (error) {
-      res.status(500).json({ msg: error.message });
+      res.status(500).json({ 
+        status:false,
+        msg: error.message
+       });
   }
 };
 
@@ -591,12 +856,19 @@ export const sociallogin = async(req, res) => {
  * @access  Private (Logged-in users)
  */
 export const enableMFA = async (req, res) => {
+
   try {
       const user = await User.findById(req.user._id);
-      if (!user) return res.status(404).json({ status: false, msg: "User not found" });
+
+      if (!user) return res.status(404).json({
+         status: false,
+          msg: "User not found" 
+        });
 
       const secret = speakeasy.generateSecret({ length: 20 });
+
       user.mfaSecret = secret.base32;
+
       await user.save();
 
       res.status(200).json({
@@ -605,7 +877,10 @@ export const enableMFA = async (req, res) => {
           secret: secret.otpauth_url,
       });
   } catch (error) {
-      res.status(500).json({ status: false, msg: "Server error: " + error.message });
+      res.status(500).json({ 
+        status: false,
+         msg: "Server error: " + error.message 
+        });
   }
 };
 
@@ -617,8 +892,13 @@ export const enableMFA = async (req, res) => {
 export const verifyMFA = async (req, res) => {
     try {
         const { token } = req.body;
+
         const user = await User.findById(req.user._id);
-        if (!user || !user.mfaSecret) return res.status(400).json({ status: false, msg: "MFA not set up" });
+
+        if (!user || !user.mfaSecret) return res.status(400).json({
+           status: false, 
+           msg: "MFA not set up" 
+          });
 
         const verified = speakeasy.totp.verify({
             secret: user.mfaSecret,
@@ -626,11 +906,20 @@ export const verifyMFA = async (req, res) => {
             token,
         });
 
-        if (!verified) return res.status(401).json({ status: false, msg: "Invalid MFA token" });
+        if (!verified) return res.status(401).json({
+           status: false, 
+           msg: "Invalid MFA token" 
+          });
 
-        res.status(200).json({ status: true, msg: "MFA verified successfully" });
+        res.status(200).json({ 
+          status: true, 
+          msg: "MFA verified successfully"
+         });
     } catch (error) {
-        res.status(500).json({ status: false, msg: "Server error: " + error.message });
+        res.status(500).json({ 
+          status: false,
+           msg: "Server error: " + error.message 
+          });
     }
 };
 
@@ -640,11 +929,22 @@ export const verifyMFA = async (req, res) => {
  * @access  Private
  */
 export const deactivateAccount = async (req, res) => {
+
     try {
         const user = await User.findByIdAndUpdate(req.user._id, { isActive: false }, { new: true });
-        res.status(200).json({ status: true, msg: "Account deactivated successfully" });
+
+        console.log("user is ",user);
+
+        res.status(200).json({
+           status: true,
+            msg: "Account deactivated successfully" 
+          });
+
     } catch (error) {
-        res.status(500).json({ status: false, msg: "Server error: " + error.message });
+        res.status(500).json({ 
+          status: false, 
+          msg: "Server error: " + error.message
+         });
     }
 };
 
@@ -656,9 +956,17 @@ export const deactivateAccount = async (req, res) => {
 export const reactivateAccount = async (req, res) => {
     try {
         const user = await User.findByIdAndUpdate(req.user._id, { isActive: true }, { new: true });
-        res.status(200).json({ status: true, msg: "Account reactivated successfully" });
+
+        res.status(200).json({
+           status: true, 
+           msg: "Account reactivated successfully" 
+          });
+
     } catch (error) {
-        res.status(500).json({ status: false, msg: "Server error: " + error.message });
+        res.status(500).json({
+           status: false,
+            msg: "Server error: " + error.message 
+          });
     }
 };
 
@@ -669,10 +977,18 @@ export const reactivateAccount = async (req, res) => {
  */
 export const deleteAccount = async (req, res) => {
     try {
+
         await User.findByIdAndDelete(req.user._id);
-        res.status(200).json({ status: true, msg: "Account deleted successfully" });
+
+        res.status(200).json({ 
+          status: true,
+           msg: "Account deleted successfully" 
+          });
     } catch (error) {
-        res.status(500).json({ status: false, msg: "Server error: " + error.message });
+        res.status(500).json({
+           status: false,
+           msg: "Server error: " + error.message
+           });
     }
 };
 
@@ -682,14 +998,28 @@ export const deleteAccount = async (req, res) => {
  * @access  Private (Admin)
  */
 export const getAllUsers = async (req, res) => {
+
   try {
+
       if (!req.user.isAdmin) {
-          return res.status(403).json({ status: false, msg: "Access denied. Admins only." });
+          return res.status(403).json({
+             status: false,
+             msg: "Access denied. Admins only." 
+            });
       }
+
       const users = await User.find();
-      res.status(200).json({ status: true, users });
+
+      res.status(200).json({ 
+        status: true, 
+        users
+       });
+
   } catch (error) {
-      res.status(500).json({ status: false, msg: "Server error: " + error.message });
+      res.status(500).json({
+         status: false, 
+        msg: "Server error: " + error.message
+       });
   }
 };
 
@@ -699,11 +1029,19 @@ export const getAllUsers = async (req, res) => {
  * @access  Private (Admin)
  */
 export const blockUser = async (req, res) => {
+
     try {
         await User.findByIdAndUpdate(req.params.id, { isBlocked: true });
-        res.status(200).json({ status: true, msg: "User blocked successfully" });
+        res.status(200).json({ 
+          status: true,
+           msg: "User blocked successfully"
+           });
+
     } catch (error) {
-        res.status(500).json({ status: false, msg: "Server error: " + error.message });
+        res.status(500).json({ 
+          status: false,
+           msg: "Server error: " + error.message 
+          });
     }
 };
 
@@ -715,9 +1053,17 @@ export const blockUser = async (req, res) => {
 export const unblockUser = async (req, res) => {
     try {
         await User.findByIdAndUpdate(req.params.id, { isBlocked: false });
-        res.status(200).json({ status: true, msg: "User unblocked successfully" });
+
+        res.status(200).json({ 
+          status: true,
+           msg: "User unblocked successfully"
+           });
+
     } catch (error) {
-        res.status(500).json({ status: false, msg: "Server error: " + error.message });
+        res.status(500).json({
+           status: false,
+            msg: "Server error: " + error.message 
+          });
     }
 };
 

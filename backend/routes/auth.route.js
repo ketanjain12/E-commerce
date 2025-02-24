@@ -10,6 +10,10 @@ import { signup,
     refreshToken,
     getProfile,
     resetpassword,
+    getAllRoles,
+    getRoleById,
+    deleteRoleById,
+    updateRole,
     verifyemail,
     sociallogin,
     changepassword,
@@ -38,8 +42,19 @@ router.post("/refresh-token",refreshToken)
 
 router.get("/Profile",getProfile)
 
+router.get("/getAllRoles",getAllRoles)
+
+router.get("/getRoleById/:id",getRoleById)
+
+router.delete("/deleteRoleById/:id",deleteRoleById)
+
+router.patch("/updateRole/:id",updateRole)
+
 // router.get("/profile", authMiddleware, getProfile);
 
 router.patch("/resetpassword",resetpassword)
+
+router.post("/verifyemail",verifyemail)
+
 
 export default router

@@ -189,9 +189,9 @@ export const validateLogin = [
   
   check("password")
     .notEmpty().withMessage("Password is required.")
-    .isLength({ min: 6 }).withMessage("Password must be at least 6 characters long.")
-    .matches(/[A-Z]/).withMessage("Password must contain at least one uppercase letter.")
-    .matches(/[!@#$%^&*]/).withMessage("Password must contain at least one special character."),
+    .isLength({ min: 6 }).withMessage("Password must be at least 6 characters long."),
+    // .matches(/[A-Z]/).withMessage("Password must contain at least one uppercase letter.")
+    // .matches(/[!@#$%^&*]/).withMessage("Password must contain at least one special character."),
 
   (req, res, next) => {
     const errors = validationResult(req);
