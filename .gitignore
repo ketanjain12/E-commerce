@@ -1,0 +1,10 @@
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+backend/nodes/
+.env
+.DS_Store
+logs/
+uploads/
+package-lock.json
+package.json
