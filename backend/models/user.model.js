@@ -62,6 +62,24 @@ const userSchema = new mongoose.Schema({
     }
 
 ) 
+
+// **Virtual Field for Confirm Password (Not stored in DB)**
+// userSchema.virtual("confirmPassword")
+// .set(function(value){
+//     this._confirmPassword=value;
+// })
+// .get(function(){
+//     return this._confirmPassword;
+// });
+
+// // **Pre-save hook to check confirmPassword**
+// userSchema.pre("save",function(next){
+//     if(this.isModified("password") && this.password !== this._confirmPassword){
+//         return next(new Error("Password do not match"))
+//     }
+//     next();
+// })
+
 // **Pre-save hook to dynamically update machine name**
 userSchema.pre("save", function (next) {
     if (!this.machineName) {
@@ -85,7 +103,6 @@ try {
 } catch (error) {
     next(error );//Ye error ko Express middleware tak propagate karta hai taaki proper error handling ho sake.
 
-
 }
 })
 userSchema.methods.comparePassword = async function (password) {
@@ -95,6 +112,14 @@ const User = mongoose.model("User",userSchema);
 
 
 export default User; 
+
+// confirmPassword field ko schema mein add karna best practice nahi hota, 
+// kyunki database mein password ko confirm karne ka koi logic nahi hota.
+//  Ye sirf client-side validation ke liye hota hai.
+
+// Lekin agar aap chahte hain ki confirmPassword ko bhi schema mein include karein sirf validation ke liye,
+//  to hum usse virtual field ke roop mein use kar sakte hain. Virtual fields MongoDB mein store nahi hote, 
+//  par aap model mein unka use kar sakte hain.
 
 //Mongoose pluralize karne ke liye inflection library use karta hai jo English rules ko follow karta hai:
 

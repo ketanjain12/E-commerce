@@ -85,56 +85,74 @@ const setCookies=(res,accessToken,refreshToken) =>{
 
 export const signup = async (req, res) => {
   try {
-    const { name, email, password,role } = req.body || {};
+    const { name, email, password, confirmPassword, role } = req.body || {};
 
-    // ✅ Check for missing fields & return immediately
-    if (!name || !email || !password || !role) {
+    // ✅ Check for missing fields
+    if (!name || !email || !password || !confirmPassword || !role) {
       return res.status(400).json({
         status: false,
         msg: "Please fill all required details",
       });
     }
+// extra data add feb 25
+// const userRole = role && ["customer","admin"].includes(role) ? role : "customer";
 
-    const existUser = await User.findOne({ email });
+    // ✅ Trim spaces to avoid unwanted issues
+    const trimmedPassword = password.trim();
+    const trimmedConfirmPassword = confirmPassword.trim();
 
-    if (existUser) {
+    // ✅ Check if passwords match
+    if (trimmedPassword !== trimmedConfirmPassword) {
       return res.status(400).json({
         status: false,
-        msg: "This email is already registered, please use a different one",
+        msg: "Passwords do not match",
       });
     }
 
-    const user = await User.create({ name, email, password,role });
+    // ✅ Check if user already exists
+    const existUser = await User.findOne({ email });
+    if (existUser) {
+      return res.status(400).json({
+        status: false,
+        msg: "This email is already registered",
+      });
+    }
 
-    // authenticate with redis and cookie 
-    const{accessToken,refreshToken }= generateTokens(user._id)
-    await storeRefreshToken(user._id,refreshToken);
+    // ✅ Save user in database (Only Password, No confirmPassword)
+    const user = await User.create({ name, email, password: trimmedPassword, role });
 
-    // set cookies
-    setCookies(res,accessToken,refreshToken)
+    // ✅ Generate JWT tokens
+    const { accessToken, refreshToken } = generateTokens(user._id);
+    await storeRefreshToken(user._id, refreshToken);
+
+    // ✅ Set cookies
+    setCookies(res, accessToken, refreshToken);
 
     return res.status(201).json({
       status: true,
       msg: "User created successfully",
-      user:{
-        _id:user._id,
-        name:user.name,
-        email:user.email,
-        role:user.role,
-        machineName:user.machineName
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        // role: userRole,
+        role: user.role,
+        machineName: user.machineName,
       },
-      accessToken:accessToken,
-      refreshToken:refreshToken
+      accessToken: accessToken,
+      refreshToken: refreshToken,
     });
 
   } catch (error) {
-    console.log("error", error);
+    console.log("Error:", error.message);
     res.status(500).json({
       status: false,
       msg: "User creation request failed: " + error.message,
     });
   }
 };
+
+
 
 /**
  * @function getAllRoles
