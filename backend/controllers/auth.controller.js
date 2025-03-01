@@ -20,6 +20,7 @@ import { sendVerificationEmail } from "../utils/emailService.js";
 
 const generateTokens =(userId)=>{
     // here we will create 2 diff tokens 
+
     const accessToken = jwt.sign({userId},process.env.ACCESS_TOKEN_SECRET,{
         expiresIn:"15m",
 
@@ -151,7 +152,6 @@ export const signup = async (req, res) => {
     });
   }
 };
-
 
 
 /**
@@ -419,6 +419,7 @@ export const signup = async (req, res) => {
 // }
 
 // Specific User Refresh Token Delete
+
 export const logout1 = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken; // ✅ Get refresh token from cookie
@@ -467,6 +468,7 @@ export const logout1 = async (req, res) => {
   }
 };
 
+
 /**
  * @function login
  * @description          Handles user authentication and token generation.
@@ -478,63 +480,118 @@ export const logout1 = async (req, res) => {
  * @throws {Error}       Throws a 500 error if there is a server error.
  */
 
-export const login = async(req,res)=>{
+// export const login = async(req,res)=>{
 
-  const {email,password}=req.body;
+//   const {email,password}=req.body;
 
-  if(!email || !password){
-    res.status(404).json({
-      status:false,
-      msg:"both fields are required pls fill both of them"
-    })
+//   if(!email || !password){
+//     res.status(404).json({
+//       status:false,
+//       msg:"both fields are required pls fill both of them"
+//     })
+//   }
+
+//   try {
+//     const user = await User.findOne({email});
+//     if(!user){
+//       res.status(404).json({
+//         status:false,
+//         msg:"this email is not existed pls come with exist email "
+//       })
+//     }
+ 
+//      if(user && (await user.comparePassword(password)))  {
+//      const{accessToken,refreshToken} = generateTokens(user._id)
+
+//      await storeRefreshToken(user._id,refreshToken)
+//      setCookies(res,accessToken,refreshToken)
+
+//      res.status(200).json({
+//       status:true,
+//       msg:"login successfully",
+//       user:{
+//         _id:user._id,
+//         name:user.name,
+//         email:user.email,
+//         role:user.role
+//       },
+//       accessToken:accessToken,
+//       refreshToken:refreshToken
+//     })
+
+//      }
+//      else{
+//       res.status(404).json({
+//         status:false,
+//         msg:"invalid email and password "
+//       })
+//      }
+
+//   } catch (error) {
+//     console.log("error is ",error);
+//     console.log("error is ",error.message);
+
+//     res.status(500).json({
+//       status:false,
+//       msg:"server error "+ error.message
+//     })
+//   }
+// }
+
+// new login code feb 26
+export const login = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(404).json({
+      status: false,
+      msg: "Both fields are required. Please fill both of them",
+    });
   }
 
   try {
-    const user = await User.findOne({email});
-    if(!user){
-      res.status(404).json({
-        status:false,
-        msg:"this email is not existed pls come with exist email "
-      })
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        status: false,
+        msg: "This email does not exist. Please use an existing email.",
+      });
     }
- 
-     if(user && (await user.comparePassword(password)))  {
-     const{accessToken,refreshToken} = generateTokens(user._id)
 
-     await storeRefreshToken(user._id,refreshToken)
-     setCookies(res,accessToken,refreshToken)
+    if (user && (await user.comparePassword(password))) {
+      const { accessToken, refreshToken } = generateTokens(user._id);
 
-     res.status(200).json({
-      status:true,
-      msg:"login successfully",
-      user:{
-        _id:user._id,
-        name:user.name,
-        email:user.email,
-        role:user.role
-      },
-      accessToken:accessToken,
-      refreshToken:refreshToken
-    })
+      await storeRefreshToken(user._id, refreshToken);
+      setCookies(res, accessToken, refreshToken);
 
-     }
-     else{
-      res.status(404).json({
-        status:false,
-        msg:"invalid email and password "
-      })
-     }
-
+      return res.status(200).json({
+        status: true,
+        msg: "Login successful",
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+        accessToken,
+        refreshToken,
+      });
+    } else {
+      return res.status(404).json({
+        status: false,
+        msg: "Invalid email or password",
+      });
+    }
   } catch (error) {
-    console.log("error is ",error);
-    console.log("error is ",error.message);
+    console.log("Error: ", error.message);
 
-    res.status(500).json({
-      status:false,
-      msg:"server error "+ error.message
-    })
+    return res.status(500).json({
+      status: false,
+      msg: "Server error: " + error.message,
+    });
   }
-}
+};
 
 /**
  * @function refreshToken
@@ -605,75 +662,70 @@ res.json({
 }
 }
 // get profile by get by id 
-// export const getProfile = async (req, res) => {
+export const getProfile = async (req, res) => {
   
-//   const { userId } = req.body;
-//   // const { userId } = req.user?.body;  // Token se userId milega
+  const { userId } = req.body;
+  // const { userId } = req.user?.body;  // Token se userId milega
 
-//   if (!userId) {
-//     return res.status(400).json({
-//       status: false,
-//       msg: "Please provide user ID for profile.",
-//     });
-//   }
+  if (!userId) {
+    return res.status(400).json({
+      status: false,
+      msg: "Please provide user ID for profile.",
+    });
+  }
 
-//   try {
+  try {
+        // ✅ User Data Fetch with Address Populate
 
-//     const user = await User.findById(userId); // ✅ Fixed findById query
+    const user = await User.findById(userId).populate("useraddress"); // ✅ Fixed findById query
 
-//     if (!user) {
-//       return res.status(404).json({
-//         status: false,
-//         msg: "User not found.",
-//       });
-//     }
+    if (!user) {
+      return res.status(404).json({
+        status: false,
+        msg: "User not found.",
+      });
+    }
 
-//     console.log("User data:", user);
-//     const{accessToken,refreshToken }= generateTokens(user._id)
+    console.log("User data:", user);
+    const{accessToken,refreshToken }= generateTokens(user._id)
 
-//     res.status(200).json({
-//       status: true,
-//       msg: "User profile fetched successfully.",
-//       UserData: {
-//         _id:user._id,
-//         name:user.name,
-//         email:user.email,
-//         role:user.role
-        
-//       },
-//       accessToken:accessToken,
-//       refreshToken:refreshToken
-//     });
+    res.status(200).json({
+      status: true,
+      msg: "User profile fetched successfully.",
+      UserData: user,
+      accessToken:accessToken,
+      refreshToken:refreshToken
+    });
 
-//   } catch (error) {
+  } catch (error) {
 
-//     console.error("Error in fetching profile:", error.message);
-//     res.status(500).json({
-//       status: false, // ✅ Fixed the incorrect status flag
-//       msg: "Error in fetching profile: " + error.message,
-//     });
+    console.error("Error in fetching profile:", error.message);
+    res.status(500).json({
+      status: false, // ✅ Fixed the incorrect status flag
+      msg: "Error in fetching profile: " + error.message,
+    });
 
-//   }
-// };
+  }
+};
 
 // new code feb 21 
 // this is a good way because get profile jab hi hogi jab token valid hogi and user authenticate hogi to profile ka data aa jayega 
-export const getProfile = async (req, res) => {
-  try {
-    res.json({
-      status: true,
-      msg: "User profile fetched successfully.",
-      UserData: {
-        _id:req.user._id,
-        name:req.user.name,
-        email:req.user.email,
-        role:req.user.role
-      } 
-    })
-  } catch (error) {
+// export const getProfile = async (req, res) => {
+//   try {
+//     res.json({
+//       status: true,
+//       msg: "User profile fetched successfully.",
+//       UserData: {
+//         _id:req.user._id,
+//         name:req.user.name,
+//         email:req.user.email,
+//         role:req.user.role
+//       } 
+//     })
+//   } catch (error) {
     
-  }
-}
+//   }
+// }
 
 
 // CSRF (Cross-Site Request Forgery) Attack Kya Hota Hai?
@@ -994,21 +1046,65 @@ export const reactivateAccount = async (req, res) => {
  * @access  Private
  */
 export const deleteAccount = async (req, res) => {
-    try {
-
-        await User.findByIdAndDelete(req.user._id);
-
-        res.status(200).json({ 
-          status: true,
-           msg: "Account deleted successfully" 
+  try {
+      // ✅ Get refresh token from cookies
+      const refreshToken = req.cookies.refreshToken;
+      if (!refreshToken) {
+          return res.status(401).json({
+              status: false,
+              msg: "Unauthorized: Refresh token is missing."
           });
-    } catch (error) {
-        res.status(500).json({
-           status: false,
-           msg: "Server error: " + error.message
-           });
-    }
+      }
+
+      // ✅ Decode Refresh Token
+      const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+      const userId = decoded.userId; // ✅ Get User ID from Token
+
+      if (!userId) {
+          return res.status(400).json({
+              status: false,
+              msg: "Invalid refresh token"
+          });
+      }
+
+      // ✅ Check if user exists in database
+      const user = await User.findById(userId);
+      if (!user) {
+          return res.status(404).json({
+              status: false,
+              msg: "User not found"
+          });
+      }
+
+      // ✅ Delete user from database
+      await User.findByIdAndDelete(userId);
+
+      // ✅ Delete refresh token from Redis
+      const redisKey = `refresh_token:${userId}`;
+      const redisToken = await redis.get(redisKey);
+
+      if (redisToken) {
+          await redis.del(redisKey);
+      }
+
+      // ✅ Clear cookies
+      res.clearCookie("accessToken");
+      res.clearCookie("refreshToken");
+
+      res.status(200).json({
+          status: true,
+          msg: "Account deleted successfully",
+      });
+
+  } catch (error) {
+      console.error("Delete Account Error:", error);
+      res.status(500).json({
+          status: false,
+          msg: "Server error: " + error.message,
+      });
+  }
 };
+
 
 /**
  * @route   GET /api/auth/users
@@ -1085,4 +1181,39 @@ export const unblockUser = async (req, res) => {
     }
 };
 
+//fot testing
 
+
+export const deleteAllUsers = async (req, res) => {
+  try {
+    // ✅ Fetch all users to get their IDs
+    const users = await User.find({}, "_id");
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        status: false,
+        msg: "No users found to delete",
+      });
+    }
+
+    // ✅ Loop through each user and delete their refresh token from Redis
+    for (const user of users) {
+      await redis.del(`refreshToken:${user._id}`);
+    }
+
+    // ✅ Delete all users from the database
+    await User.deleteMany({});
+
+    return res.status(200).json({
+      status: true,
+      msg: "All users and their tokens deleted successfully",
+    });
+
+  } catch (error) {
+    console.log("Error:", error.message);
+    res.status(500).json({
+      status: false,
+      msg: "User deletion request failed: " + error.message,
+    });
+  }
+};

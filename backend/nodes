@@ -278,3 +278,113 @@
           });
         }
       };
+
+      // for add filed 
+      // Step 1: Create a Utility Function
+// 🔹 Ye function Nominatim API ka use karke address se latitude & longitude fetch karega.
+// 🔹 File: utils/getCoordinates.js
+
+// ✔ Ye function OpenStreetMap's Nominatim API se address ka latitude & longitude fetch karega.
+// ✔ Agar address invalid hoga toh { latitude: null, longitude: null } return karega.
+
+// Step 2: Update Address Controller Function and create a new route file also
+// 🔹 routes/addressRoutes.js me Google Maps API ki jagah getCoordinates() function ko use karna hai.
+
+// Step 3: Address Model Update Karein
+// 📌 backend/models/Address.js
+
+// ✅ Step 4: Test with Postman
+// 1️⃣ Add Address
+// Endpoint: POST /api/address/add
+// Headers: Authorization: Bearer <your_refresh_token>
+
+// Delete Address
+// Endpoint: DELETE /api/address/delete/:addressId
+// 4️⃣ Get Address by ID
+// Endpoint: GET /api/address/get/:addressId
+// 5️⃣ Get All Addresses of Logged-in User
+// Endpoint: GET /api/address/user
+
+// osm lib information and install npm install node-fetch and update add address api
+
+// {
+//   Haan, tum OSM API ke liye osm-api package use kar sakte ho, lekin agar tum sirf address se latitude/longitude fetch kar rahe ho, toh nominatim.openstreetmap.org hi best hai. osm-api mainly OSM data edit karne ke liye hota hai.
+
+// Agar tum osm-api package use karna chahte ho, toh yeh ek simple implementation ho sakta hai:
+
+// ✅ Step 1: Install osm-api
+// bash
+// Copy
+// Edit
+// npm install osm-api
+// ✅ Step 2: Import & Configure
+// js
+// Copy
+// Edit
+// const OSM = require("osm-api");
+
+// OSM.configure({
+//     username: "your_osm_username",
+//     password: "your_osm_password"
+// });
+// 💡 Note: Authentication sirf edit karne ke liye chahiye, read requests ke liye nahi. Agar tum sirf address to lat/lon chahte ho, toh authentication ki zaroorat nahi hai.
+
+// ✅ Step 3: Get Latitude & Longitude From Address
+// js
+// Copy
+// Edit
+// async function getCoordinates(address) {
+//     try {
+//         const response = await OSM.geocoder.search({ q: address });
+//         if (response.length === 0) {
+//             throw new Error("No results found");
+//         }
+
+//         return {
+//             latitude: parseFloat(response[0].lat),
+//             longitude: parseFloat(response[0].lon)
+//         };
+//     } catch (error) {
+//         console.error("OSM Error:", error.message);
+//         return { latitude: null, longitude: null };
+//     }
+// }
+
+// // Test Function
+// getCoordinates("123 Main St, New York, USA").then(console.log);
+// ✅ Alternative: Search Nearby POIs
+// Agar tum kisi specific type ke places (jaise ki restaurants, hospitals, etc.) nearby search karna chahte ho:
+
+// js
+// Copy
+// Edit
+// async function getNearbyRestaurants(lat, lon) {
+//     try {
+//         const results = await OSM.query({
+//             type: "node",
+//             tag: "amenity=restaurant",
+//             bbox: [lat - 0.01, lon - 0.01, lat + 0.01, lon + 0.01]
+//         });
+
+//         console.log("Nearby Restaurants:", results);
+//         return results;
+//     } catch (error) {
+//         console.error("OSM Query Error:", error.message);
+//         return [];
+//     }
+// }
+
+// // Test Function
+// getNearbyRestaurants(40.7128, -74.0060); // New York City
+// 🚀 Which One Should You Use?
+// ✔ For Address → Lat/Lon: Use OSM.geocoder.search()
+// ✔ For Searching Nearby Places: Use OSM.query()
+// ✔ For Simple Lat/Lon Fetching: nominatim.openstreetmap.org API is better (no need for extra dependencies).
+
+// 💡 Tum kis use case ke liye implement kar rahe ho? Batao, toh uske hisaab se best approach suggest kar sakta hoon! 🚀
+
+
+
+
+// }
+

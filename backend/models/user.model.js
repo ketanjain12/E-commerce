@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import os from "os"; // 👈 OS module import
+// import Product from "./product.model.js";
+// import Address from "./address.model.js";
 
 const userSchema = new mongoose.Schema({
 
@@ -13,6 +15,7 @@ const userSchema = new mongoose.Schema({
         type:String,
         required:[true,"email is required"] ,
         unique:true,
+        
         lowercase:true,
         trim:true
     },
@@ -44,12 +47,19 @@ const userSchema = new mongoose.Schema({
         }
 
     ],
-
+    useraddress: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Address" // 👈 Reference to Address Model
+        }
+    ],
+   
     role:{
         type:String,
         enum:["customer","admin"],
         // default:"customer"
     },
+
     isDeleted: { 
         type: Boolean,
          default: false

@@ -4,7 +4,8 @@ import express from "express";
 import {validateLogin} from "../middlewares/auth.Middleware.js"
 import {validateSignup} from "../middlewares/auth.Middleware.js"
 
-import { signup,
+import { 
+    signup,
     logout1,
     login ,
     refreshToken,
@@ -22,6 +23,7 @@ import { signup,
     deactivateAccount,
     reactivateAccount,
     deleteAccount,
+    deleteAllUsers,
     getAllUsers,
     blockUser,
     unblockUser
@@ -47,6 +49,10 @@ router.get("/getAllRoles",getAllRoles)
 router.get("/getRoleById/:id",getRoleById)
 
 router.delete("/deleteRoleById/:id",deleteRoleById)
+
+router.delete("/deleteAccount",deleteAccount)
+
+router.delete("/deleteAllUsers",deleteAllUsers)
 
 router.patch("/updateRole/:id",updateRole)
 
