@@ -1,7 +1,7 @@
 import express from "express";
 // import {authMiddleware} from "../middlewares/auth.Middleware.js"
 
-import {validateLogin} from "../middlewares/auth.Middleware.js"
+import {adminRoute, protectRoute, validateLogin} from "../middlewares/auth.Middleware.js"
 import {validateSignup} from "../middlewares/auth.Middleware.js"
 
 import { 
@@ -52,13 +52,16 @@ router.delete("/deleteRoleById/:id",deleteRoleById)
 
 router.delete("/deleteAccount",deleteAccount)
 
-router.delete("/deleteAllUsers",deleteAllUsers)
+router.delete("/deleteAllUsers",protectRoute,adminRoute,deleteAllUsers)
 
 router.patch("/updateRole/:id",updateRole)
 
 // router.get("/profile", authMiddleware, getProfile);
 
 router.patch("/resetpassword",resetpassword)
+
+// getAllUsers
+router.get("/getAllUsers",protectRoute,adminRoute,getAllUsers)
 
 router.post("/verifyemail",verifyemail)
 

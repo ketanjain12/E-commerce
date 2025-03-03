@@ -10,6 +10,8 @@ import speakeasy from "speakeasy";
 // Iska use Google Authenticator, Authy, Microsoft Authenticator jaisi apps ke saath bhi kiya ja sakta hai.
 
 import { sendVerificationEmail } from "../utils/emailService.js";
+import Address from "../models/address.model.js";
+import Order from "../models/order.model.js";
 
 /**
  * @function generateTokens
@@ -678,6 +680,16 @@ export const getProfile = async (req, res) => {
         // ✅ User Data Fetch with Address Populate
 
     const user = await User.findById(userId).populate("useraddress"); // ✅ Fixed findById query
+  
+    // populate("useraddress") ka use Mongoose me reference field se related data fetch karne ke liye hota hai.
+
+    // Detail Explanation:
+    // Agar User model me useraddress ek ObjectId hai jo Address model ko refer karta hai, 
+    // toh findById(userId).populate("useraddress") query User ka data fetch karne ke saath-saath 
+    // uska related address data bhi fetch karegi.
+
+    // Jab populate Use Karna Chahiye?
+    // Jab do alag-alag collections (tables) ke data ko ek saath lana ho.
 
     if (!user) {
       return res.status(404).json({
@@ -1106,36 +1118,80 @@ export const deleteAccount = async (req, res) => {
 };
 
 
-/**
- * @route   GET /api/auth/users
- * @desc    Get all users (Admin only)
- * @access  Private (Admin)
- */
+
+// export const getAllUsers = async (req, res) => {
+//   try {
+//     // Yahan pe middleware already laga hoga, isliye req.user available hoga
+//     const users = await User.find().select("-password"); // Password exclude kar diya hai for security
+
+//     res.status(200).json({
+//       status: true,
+//       users,
+//     });
+
+//   } catch (error) {
+//     res.status(500).json({
+//       status: false,
+//       msg: "Server error: " + error.message,
+//     });
+//   }
+// };
+
+// advance getall user by admmin mar 3
 export const getAllUsers = async (req, res) => {
-
   try {
+    // Ensure only admin users can access this API
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({
+        status: false,
+        msg: "Access denied - Admins only",
+      });
+    }
 
-      if (!req.user.isAdmin) {
-          return res.status(403).json({
-             status: false,
-             msg: "Access denied. Admins only." 
-            });
-      }
+    // Extract query parameters (role filter and pagination)
+    const { role, page = 1, limit = 10 } = req.query;
 
-      const users = await User.find();
+    // Build the query object
+    let query = {};
+    if (role) {
+      query.role = role; // Filter by role (admin or user)
+    }
 
-      res.status(200).json({ 
-        status: true, 
-        users
-       });
+    // Calculate pagination values
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Fetch users with pagination
+    const users = await User.find(query)
+      .select("-password") // Exclude password for security
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get total count for pagination info
+    const totalUsers = await User.countDocuments(query);
+  
+    // Get count of Admins & Customers
+    const totalAdmins = await User.countDocuments({ role: "admin" });
+    const totalCustomers = await User.countDocuments({ role: "customer" });
+
+    res.status(200).json({
+      status: true,
+      page: parseInt(page),
+      totalPages: Math.ceil(totalUsers / limit),
+      totalUsers,
+      totalAdmins,
+      totalCustomers,
+      users,
+     
+    });
 
   } catch (error) {
-      res.status(500).json({
-         status: false, 
-        msg: "Server error: " + error.message
-       });
+    res.status(500).json({
+      status: false,
+      msg: "Server error: " + error.message,
+    });
   }
 };
+
 
 /**
  * @route   PUT /api/auth/block/:id
@@ -1195,6 +1251,16 @@ export const deleteAllUsers = async (req, res) => {
         msg: "No users found to delete",
       });
     }
+
+        // ✅ Extract user IDs
+
+        const userIds = users.map((user)=>user._id);
+
+        // ✅ Delete all related databases
+        await Address.deleteMany({user:{$in:userIds}});
+
+        // ✅ Delete all related orders
+        await Order.deleteMany({ user: { $in: userIds } });
 
     // ✅ Loop through each user and delete their refresh token from Redis
     for (const user of users) {

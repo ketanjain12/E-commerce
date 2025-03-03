@@ -127,7 +127,7 @@ export const protectRoute = async(req,res,next)=>{
       msg: "error in productroute middleware: " + error.message,
     });
  }
- next() // call next function 
+//  next() // call next function 
 
 }
 

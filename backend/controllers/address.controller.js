@@ -204,16 +204,21 @@ export const addAddress = async (req, res) => {
                 );
           }
 
-        const { street,
+        const { 
+            street,
              address2, 
              landmark,
               city,
                state, 
                country, 
-               postalCode 
+               postalCode ,
+               phoneNumber,
+               alternatePhone,
+               addressType,
+               deliveryInstructions
             } = req.body;
 
-        if (!street || !city || !state || !country || !postalCode) {
+        if (!street || !city || !state || !country || !postalCode || !phoneNumber || !alternatePhone ) {
             return res.status(400).json({
                  status: false,
                   msg: "All address fields are required!"
@@ -266,6 +271,10 @@ export const addAddress = async (req, res) => {
             state,
             country,
             postalCode,
+            phoneNumber,
+            alternatePhone,
+            addressType,
+            deliveryInstructions,
             latitude: parseFloat(lat),
             longitude: parseFloat(lon),
         });
@@ -520,3 +529,470 @@ export const getUserAddresses = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+
+
+//points of  create api for find nearest store 
+//  1 search  nearby store using latitude  and longitude 
+// 2 fetch all stores according by nearest 
+
+// for location agggregate = $geoNear   
+// [
+//     Here’s an advanced Node.js API using Express and MongoDB (Mongoose) to find the nearest stores based on latitude and longitude.
+
+// Features of This API
+// ✅ Uses MongoDB's geospatial indexing for efficient queries.
+// ✅ Two Endpoints:
+
+// /searchNearbyStores – Finds stores within a given radius.
+// /fetchAllNearestStores – Fetches all stores sorted by proximity.
+// ✅ Supports Indexing for Fast Search using 2dsphere index.
+// ✅ Highly Scalable for large datasets.
+// 1️⃣ MongoDB Schema (models/Store.js)
+// Create a Store model with geospatial indexing.
+
+// const mongoose = require("mongoose");
+
+// const storeSchema = new mongoose.Schema({
+//   name: { type: String, required: true },
+//   address: { type: String, required: true },
+//   location: {
+//     type: { type: String, enum: ["Point"], required: true },
+//     coordinates: { type: [Number], required: true }, // [longitude, latitude]
+//   },
+// });
+
+// // Create 2dsphere index for geospatial queries
+// storeSchema.index({ location: "2dsphere" });
+
+// module.exports = mongoose.model("Store", storeSchema);
+
+// type: "Point" -> Yeh define karta hai ki location ek single point hai.
+// coordinates: [longitude, latitude] -> Yeh longitude aur latitude ka array store karta hai.
+// storeSchema.index({ location: "2dsphere" }) -> Yeh index create karta hai jo queries ko fast banata hai.
+
+// MongoDB ka $geoNear ya $geoWithin operator use karke hum sabse kareeb ke stores dhoondh sakte hain.
+
+// ⚡ Benefits of 2dsphere Index
+// ✅ Fast Search – Normal queries ke comparison me 100x tez chalti hai.
+// ✅ Geo Queries – Aap nearest places, within area search, distance calculation kar sakte hain.
+// ✅ Scalability – Large datasets ke liye optimized hai.
+
+// Agar aap location-based search features bana rahe ho (jaise Swiggy, Zomato, Ola, Uber), to 2dsphere index must hai! 🚀
+// 2️⃣ Express API Implementation (server.js)
+// Install Required Dependencies
+
+// npm install express mongoose dotenv
+// API Code (server.js)
+
+// require("dotenv").config();
+// const express = require("express");
+// const mongoose = require("mongoose");
+// const Store = require("./models/Store");
+
+// const app = express();
+// const PORT = process.env.PORT || 5000;
+
+// app.use(express.json());
+
+// // Connect to MongoDB
+// mongoose
+//   .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+//   .then(() => console.log("MongoDB connected"))
+//   .catch((err) => console.error("MongoDB connection error:", err));
+
+// // 1️⃣ API: Search Nearby Stores Within a Radius (Default: 10 km)
+// app.get("/searchNearbyStores", async (req, res) => {
+//   try {
+//     const { latitude, longitude, radius = 10 } = req.query;
+
+//     if (!latitude || !longitude) {
+//       return res.status(400).json({ error: "Latitude and Longitude are required" });
+//     }
+
+//     const stores = await Store.find({
+//       location: {
+//         $geoWithin: {
+//           $centerSphere: [[parseFloat(longitude), parseFloat(latitude)], radius / 6378.1], // Radius in km
+//         },
+//       },
+//     });
+
+//     res.json(stores);
+//   } catch (err) {
+//     console.error("Error:", err);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
+
+// // 2️⃣ API: Fetch All Stores Sorted by Nearest Distance
+// app.get("/fetchAllNearestStores", async (req, res) => {
+//   try {
+//     const { latitude, longitude } = req.query;
+
+//     if (!latitude || !longitude) {
+//       return res.status(400).json({ error: "Latitude and Longitude are required" });
+//     }
+
+//     const stores = await Store.aggregate([
+//       {
+//         $geoNear: {
+//           near: { type: "Point", coordinates: [parseFloat(longitude), parseFloat(latitude)] },
+//           distanceField: "distance",
+//           spherical: true,
+//         },
+//       },
+//     ]);
+
+//     res.json(stores);
+//   } catch (err) {
+//     console.error("Error:", err);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
+
+// // Start Server
+// app.listen(PORT, () => {
+//   console.log(`Server is running on port ${PORT}`);
+// });
+// 3️⃣ How to Use the API
+// 📌 1. Search for Nearby Stores
+// Endpoint:
+
+
+// GET /searchNearbyStores?latitude=28.7041&longitude=77.1025&radius=10
+// Response:
+
+
+// [
+//   {
+//     "_id": "64a1b1d9...",
+//     "name": "SuperMart",
+//     "address": "Connaught Place, Delhi",
+//     "location": {
+//       "type": "Point",
+//       "coordinates": [77.1025, 28.7041]
+//     }
+//   }
+// ]
+// 📌 2. Fetch All Stores Sorted by Nearest Distance
+// Endpoint:
+
+// GET /fetchAllNearestStores?latitude=28.7041&longitude=77.1025
+// Response:
+
+
+// [
+//   {
+//     "_id": "64a1b1d9...",
+//     "name": "Local Grocery",
+//     "address": "Karol Bagh, Delhi",
+//     "location": {
+//       "type": "Point",
+//       "coordinates": [77.1030, 28.7050]
+//     },
+//     "distance": 1200.5
+//   },
+//   {
+//     "_id": "64a1b1d9...",
+//     "name": "SuperMart",
+//     "address": "Connaught Place, Delhi",
+//     "location": {
+//       "type": "Point",
+//       "coordinates": [77.1025, 28.7041]
+//     },
+//     "distance": 2500.3
+//   }
+// ]
+// 4️⃣ How to Insert Data in MongoDB
+// Run this script in Node.js to add sample stores:
+
+// const mongoose = require("mongoose");
+// const Store = require("./models/Store");
+
+// mongoose
+//   .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+//   .then(async () => {
+//     console.log("Connected to MongoDB");
+
+//     const stores = [
+//       {
+//         name: "SuperMart",
+//         address: "Connaught Place, Delhi",
+//         location: { type: "Point", coordinates: [77.1025, 28.7041] },
+//       },
+//       {
+//         name: "Local Grocery",
+//         address: "Karol Bagh, Delhi",
+//         location: { type: "Point", coordinates: [77.1030, 28.7050] },
+//       },
+//     ];
+
+//     await Store.insertMany(stores);
+//     console.log("Stores inserted successfully");
+
+//     mongoose.connection.close();
+//   })
+//   .catch((err) => console.error("MongoDB connection error:", err));
+// ✅ Why This is an Advanced API?
+// ✔ Uses MongoDB’s Geospatial Indexing (2dsphere) for optimized queries.
+// ✔ Implements $geoWithin and $geoNear queries for high performance.
+// ✔ Uses Mongoose Schema Validation to ensure correct data.
+// ✔ Highly Scalable for large datasets.
+// ]
+
+// {
+//     🚀 Advanced Level Nearest Store API with Redis Caching & JWT Authentication
+// Aapke requirement ke hisaab se, hum 3 major features add karenge:
+// 1️⃣ Find Nearby Store API (Latitude & Longitude ke basis par)
+// 2️⃣ Fetch All Stores Sorted by Nearest
+// 3️⃣ Redis Caching for Fast Responses
+// 4️⃣ JWT Authentication for Secure API Access
+
+// 📌 Step 1: Install Required Packages
+// sh
+// Copy
+// Edit
+// npm install express mongoose jsonwebtoken redis dotenv
+// express → API banane ke liye
+// mongoose → MongoDB connection ke liye
+// jsonwebtoken → JWT auth ke liye
+// redis → Caching ke liye
+// dotenv → Environment variables ke liye
+// 📌 Step 2: Setup MongoDB with 2dsphere Index
+// Pehle Mongoose model banate hain jo latitude & longitude store karega.
+
+// 📝 models/Store.js
+// javascript
+// Copy
+// Edit
+// const mongoose = require("mongoose");
+
+// const storeSchema = new mongoose.Schema({
+//   name: { type: String, required: true },
+//   address: { type: String, required: true },
+//   location: {
+//     type: { type: String, enum: ["Point"], required: true },
+//     coordinates: { type: [Number], required: true }, // [longitude, latitude]
+//   },
+// });
+
+// // Important: Create 2dsphere index for geo queries
+// storeSchema.index({ location: "2dsphere" });
+
+// module.exports = mongoose.model("Store", storeSchema);
+// 📌 Step 3: Setup Redis for Caching
+// Agar user baar-baar same request kare, to Redis caching use karke response fast banayenge.
+
+// 📝 config/redisClient.js
+// javascript
+// Copy
+// Edit
+// const redis = require("redis");
+
+// const redisClient = redis.createClient({
+//   socket: { host: "127.0.0.1", port: 6379 }, // Default Redis port
+// });
+
+// redisClient.on("error", (err) => console.error("Redis Error:", err));
+
+// (async () => {
+//   await redisClient.connect();
+//   console.log("Redis Connected ✅");
+// })();
+
+// module.exports = redisClient;
+// 📌 Step 4: Create JWT Authentication Middleware
+// Hum ek JWT token authentication middleware banayenge jo API ko secure karega.
+
+// 📝 middleware/authMiddleware.js
+// javascript
+// Copy
+// Edit
+// const jwt = require("jsonwebtoken");
+// const dotenv = require("dotenv");
+// dotenv.config();
+
+// module.exports = function (req, res, next) {
+//   const token = req.header("Authorization");
+//   if (!token) return res.status(401).json({ error: "Access Denied" });
+
+//   try {
+//     const verified = jwt.verify(token, process.env.JWT_SECRET);
+//     req.user = verified;
+//     next();
+//   } catch (err) {
+//     res.status(400).json({ error: "Invalid Token" });
+//   }
+// };
+// 🔹 Token send karne ke liye request header me "Authorization": "Bearer <TOKEN>" bhejna hoga.
+
+// 📌 Step 5: Create API Routes
+// Ab hum 2 API endpoints banayenge:
+
+// Find nearest store
+// Fetch all stores sorted by distance
+// 📝 routes/storeRoutes.js
+// javascript
+// Copy
+// Edit
+// const express = require("express");
+// const Store = require("../models/Store");
+// const redisClient = require("../config/redisClient");
+// const authMiddleware = require("../middleware/authMiddleware");
+
+// const router = express.Router();
+
+// /**
+//  * 🔍 API 1: Find Nearest Store (Within 10 KM)
+//  */
+// router.get("/findNearestStore", authMiddleware, async (req, res) => {
+//   try {
+//     const { latitude, longitude } = req.query;
+
+//     if (!latitude || !longitude) {
+//       return res.status(400).json({ error: "Latitude & Longitude required" });
+//     }
+
+//     const cacheKey = `nearest_store_${latitude}_${longitude}`;
+//     const cachedData = await redisClient.get(cacheKey);
+    
+//     if (cachedData) {
+//       return res.status(200).json(JSON.parse(cachedData));
+//     }
+
+//     const store = await Store.findOne({
+//       location: {
+//         $near: {
+//           $geometry: { type: "Point", coordinates: [parseFloat(longitude), parseFloat(latitude)] },
+//           $maxDistance: 10000, // 10 KM
+//         },
+//       },
+//     });
+
+//     if (!store) return res.status(404).json({ error: "No stores found nearby" });
+
+//     await redisClient.setEx(cacheKey, 3600, JSON.stringify(store)); // Cache for 1 hour
+
+//     res.status(200).json(store);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
+// /**
+//  * 📍 API 2: Fetch All Stores Sorted by Nearest
+//  */
+// router.get("/fetchAllNearestStores", authMiddleware, async (req, res) => {
+//   try {
+//     const { latitude, longitude } = req.query;
+
+//     if (!latitude || !longitude) {
+//       return res.status(400).json({ error: "Latitude & Longitude required" });
+//     }
+
+//     const cacheKey = `all_nearest_stores_${latitude}_${longitude}`;
+//     const cachedData = await redisClient.get(cacheKey);
+
+//     if (cachedData) {
+//       return res.status(200).json(JSON.parse(cachedData));
+//     }
+
+//     const stores = await Store.aggregate([
+//       {
+//         $geoNear: {
+//           near: { type: "Point", coordinates: [parseFloat(longitude), parseFloat(latitude)] },
+//           distanceField: "distance",
+//           maxDistance: 20000, // 20 KM
+//           spherical: true,
+//         },
+//       },
+//     ]);
+
+//     await redisClient.setEx(cacheKey, 3600, JSON.stringify(stores)); // Cache for 1 hour
+
+//     res.status(200).json(stores);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
+// module.exports = router;
+// 📌 Step 6: Setup Express Server
+// 📝 server.js
+// javascript
+// Copy
+// Edit
+// const express = require("express");
+// const mongoose = require("mongoose");
+// const dotenv = require("dotenv");
+
+// dotenv.config();
+
+// const app = express();
+// app.use(express.json());
+
+// // MongoDB Connection
+// mongoose
+//   .connect(process.env.MONGO_URI)
+//   .then(() => console.log("MongoDB Connected ✅"))
+//   .catch((err) => console.error("MongoDB Connection Failed:", err));
+
+// // Routes
+// app.use("/api/stores", require("./routes/storeRoutes"));
+
+// const PORT = process.env.PORT || 5000;
+// app.listen(PORT, () => console.log(`Server running on port ${PORT} 🚀`));
+// 📌 Step 7: Environment Variables
+// 🔹 📝 .env File
+
+// ini
+// Copy
+// Edit
+// PORT=5000
+// MONGO_URI=mongodb://localhost:27017/yourDBName
+// JWT_SECRET=your_secret_key
+// 📌 Step 8: Testing the APIs
+// 1️⃣ Create a JWT Token (For Testing)
+
+// http
+// Copy
+// Edit
+// POST /api/auth/login
+// Content-Type: application/json
+
+// {
+//   "email": "test@example.com",
+//   "password": "123456"
+// }
+// 🔹 Response:
+
+// json
+// Copy
+// Edit
+// { "token": "your_generated_jwt_token" }
+// 2️⃣ Find Nearest Store (10 KM Range)
+
+// http
+// Copy
+// Edit
+// GET /api/stores/findNearestStore?latitude=28.7041&longitude=77.1025
+// Authorization: Bearer <TOKEN>
+// 3️⃣ Fetch All Stores Sorted by Nearest
+
+// http
+// Copy
+// Edit
+// GET /api/stores/fetchAllNearestStores?latitude=28.7041&longitude=77.1025
+// Authorization: Bearer <TOKEN>
+// 🎯 Features Added
+// ✅ MongoDB 2dsphere Index for Fast Geospatial Queries
+// ✅ Redis Caching for Optimized Performance
+// ✅ JWT Authentication for Secure API Access
+
+// Aap chaho to pagination aur dynamic radius filtering bhi add kar sakte ho. 🚀
+// Koi aur feature chahiye to batao! 🔥
+
+// }

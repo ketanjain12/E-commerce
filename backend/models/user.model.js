@@ -63,7 +63,13 @@ const userSchema = new mongoose.Schema({
     isDeleted: { 
         type: Boolean,
          default: false
-         } // Default set to false
+         }, // Default set to false
+
+  phoneNumber: { type: Number },
+   age: { type: Number },
+    dob: { type: Date },
+    isVerified: { type: Boolean, default: false },
+
 
 },
 
