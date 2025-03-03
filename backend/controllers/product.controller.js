@@ -90,18 +90,19 @@ try {
 }
 }
 
-
+// yt code
 export const createProduct = async(req,res)=>{
 
 try {
 
     const {name,description,image,price,category} = req.body; // isFeatured bydefault false admin can chnage this from frontend side
 
-    let cloudinaryResponse = null ;
+    let cloudinaryResponse = null;
 
     if(image){
-    let cloudinaryResponse = await cloudinary.uploader.upload(image,{folder:"products"})
+     cloudinaryResponse = await cloudinary.uploader.upload(image,{folder:"products"})
     }
+    // console.log("cloudinaryResponse",cloudinaryResponse);
    // now create db 
   //  🚫 Mistake:
 
@@ -127,6 +128,7 @@ try {
             msg:"failed to create product" + error.message
             
         })
+          // Ensure response is sent only once
 }
 }
 

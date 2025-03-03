@@ -247,6 +247,7 @@ export const addAddress = async (req, res) => {
 
         // ✅ Check max address limit
         const userAddresses = await Address.find({ user: userId });
+        
         if (userAddresses.length >= 5) {
             return res.status(400).json({ 
                 status: false,
